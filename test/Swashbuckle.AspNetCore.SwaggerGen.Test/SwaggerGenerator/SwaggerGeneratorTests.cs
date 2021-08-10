@@ -200,7 +200,11 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
                             new ApiParameterDescription
                             {
                                 Name = "param",
-                                Source = BindingSource.Path
+                                Source = BindingSource.Path,
+                                RouteInfo = new ApiParameterRouteInfo
+                                {
+                                    IsOptional = false
+                                }
                             }
                         })
                 }
@@ -210,40 +214,6 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var operation = document.Paths["/resource"].Operations[OperationType.Post];
             Assert.True(operation.Parameters.First().Required);
-        }
-
-        [Theory]
-        [InlineData(nameof(FakeController.ActionWithParameter), false)]
-        [InlineData(nameof(FakeController.ActionWithParameterWithRequiredAttribute), true)]
-        [InlineData(nameof(FakeController.ActionWithParameterWithBindRequiredAttribute), true)]
-        public void GetSwagger_SetsParameterRequired_IfActionParameterHasRequiredOrBindRequiredAttribute(
-            string actionName,
-            bool expectedRequired)
-        {
-            var subject = Subject(
-                apiDescriptions: new[]
-                {
-                    ApiDescriptionFactory.Create(
-                        methodInfo: typeof(FakeController).GetMethod(actionName),
-                        groupName: "v1",
-                        httpMethod: "POST",
-                        relativePath: "resource",
-                        parameterDescriptions: new []
-                        {
-                            new ApiParameterDescription
-                            {
-                                Name = "param",
-                                Source = BindingSource.Query
-                            }
-                        })
-                }
-            );
-
-            var document = subject.GetSwagger("v1");
-
-            var operation = document.Paths["/resource"].Operations[OperationType.Post];
-            Assert.Equal(1, operation.Parameters.Count);
-            Assert.Equal(expectedRequired, operation.Parameters.First().Required);
         }
 
         [Fact]
@@ -311,7 +281,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         }
 
         [Theory]
-        [InlineData(nameof(FakeController.ActionWithParameter), false)]
+        [InlineData(nameof(FakeController.ActionWithParameter), true)]
         [InlineData(nameof(FakeController.ActionWithParameterWithRequiredAttribute), true)]
         [InlineData(nameof(FakeController.ActionWithParameterWithBindRequiredAttribute), true)]
         public void GetSwagger_SetsRequestBodyRequired_IfActionParameterHasRequiredOrBindRequiredMetadata(

@@ -196,8 +196,9 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 ? ParameterLocationMap[apiParameter.Source]
                 : ParameterLocation.Query;
 
-            var isRequired = (apiParameter.IsFromPath())
-                || apiParameter.CustomAttributes().Any(attr => RequiredAttributeTypes.Contains(attr.GetType()));
+            var isRequired = apiParameter.Source == BindingSource.Body
+                || apiParameter.ModelMetadata != null && apiParameter.ModelMetadata.IsBindingRequired
+                || (apiParameter.Source == BindingSource.Path && apiParameter.RouteInfo != null && !apiParameter.RouteInfo.IsOptional);
 
             var schema = (apiParameter.ModelMetadata != null)
                 ? GenerateSchema(
@@ -300,7 +301,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         {
             var contentTypes = InferRequestContentTypes(apiDescription);
 
-            var isRequired = bodyParameter.CustomAttributes().Any(attr => RequiredAttributeTypes.Contains(attr.GetType()));
+            var isRequired = true;
 
             var schema = GenerateSchema(
                 bodyParameter.ModelMetadata.ModelType,
@@ -389,7 +390,11 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
                 properties.Add(name, schema);
 
-                if (formParameter.IsFromPath() || formParameter.CustomAttributes().Any(attr => RequiredAttributeTypes.Contains(attr.GetType())))
+                var isRequired = formParameter.Source == BindingSource.Body
+                    || formParameter.ModelMetadata != null && formParameter.ModelMetadata.IsBindingRequired
+                    || (formParameter.Source == BindingSource.Path && formParameter.RouteInfo != null && !formParameter.RouteInfo.IsOptional);
+
+                if (isRequired)
                     requiredPropertyNames.Add(name);
             }
 
@@ -484,12 +489,6 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             { BindingSource.Query, ParameterLocation.Query },
             { BindingSource.Header, ParameterLocation.Header },
             { BindingSource.Path, ParameterLocation.Path }
-        };
-
-        private static readonly IEnumerable<Type> RequiredAttributeTypes = new[]
-        {
-            typeof(BindRequiredAttribute),
-            typeof(RequiredAttribute)
         };
 
         private static readonly Dictionary<string, string> ResponseDescriptionMap = new Dictionary<string, string>
