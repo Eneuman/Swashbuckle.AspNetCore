@@ -101,7 +101,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var document = subject.GetSwagger("v1");
 
-            Assert.Equal("SomeEndpointName", document.Paths["/resource"].Operations[OperationType.Post].OperationId);     
+            Assert.Equal("SomeEndpointName", document.Paths["/resource"].Operations[OperationType.Post].OperationId);
         }
 
 
@@ -244,6 +244,45 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var operation = document.Paths["/resource"].Operations[OperationType.Post];
             Assert.Equal(1, operation.Parameters.Count);
             Assert.Equal(expectedRequired, operation.Parameters.First().Required);
+        }
+
+        [Theory]
+        [InlineData(nameof(FakeControllerWithNullableReferenceTypes.ActionWithNonNullableReferenceTypeParameter), false)]
+        [InlineData(nameof(FakeControllerWithNullableReferenceTypes.ActionWithNullableReferenceTypeParameter), true)]
+        [InlineData(nameof(FakeControllerWithNullableReferenceTypes.ActionWithNullableParameter), true)]
+        [InlineData(nameof(FakeControllerWithNullableReferenceTypes.ActionWithNonNullableParameter), false)]
+        public void GetSwagger_SetsParameterNullable_IfActionParameterIsOfNullableType(
+            string actionName,
+            bool expectedNullable)
+        {
+            var subject = Subject(
+                apiDescriptions: new[]
+                {
+                    ApiDescriptionFactory.Create(
+                        methodInfo: typeof(FakeControllerWithNullableReferenceTypes).GetMethod(actionName),
+                        groupName: "v1",
+                        httpMethod: "POST",
+                        relativePath: "resource",
+                        parameterDescriptions: new []
+                        {
+                            new ApiParameterDescription
+                            {
+                                Name = "param",
+                                Source = BindingSource.Query
+                            }
+                        })
+                },
+                 schemaGeneratorOptions: new SchemaGeneratorOptions
+                 {
+                     SupportNonNullableReferenceTypes = true
+                 }
+            );
+
+            var document = subject.GetSwagger("v1");
+
+            var operation = document.Paths["/resource"].Operations[OperationType.Post];
+            Assert.Equal(1, operation.Parameters.Count);
+            Assert.Equal(expectedNullable, operation.Parameters.First().Schema.Nullable);
         }
 
         [Fact]
@@ -884,12 +923,12 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             Assert.Contains("ComplexType", document.Components.Schemas.Keys);
         }
 
-        private SwaggerGenerator Subject(IEnumerable<ApiDescription> apiDescriptions, SwaggerGeneratorOptions options = null)
+        private SwaggerGenerator Subject(IEnumerable<ApiDescription> apiDescriptions, SwaggerGeneratorOptions options = null, SchemaGeneratorOptions schemaGeneratorOptions = null)
         {
             return new SwaggerGenerator(
                 options ?? DefaultOptions,
                 new FakeApiDescriptionGroupCollectionProvider(apiDescriptions),
-                new SchemaGenerator(new SchemaGeneratorOptions(), new JsonSerializerDataContractResolver(new JsonSerializerOptions()))
+                new SchemaGenerator(schemaGeneratorOptions ?? DefaultSchemaGeneratorOptions, new JsonSerializerDataContractResolver(new JsonSerializerOptions()))
             );
         }
 
@@ -900,5 +939,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
                 ["v1"] = new OpenApiInfo { Version = "V1", Title = "Test API" }
             }
         };
+
+        private static readonly SchemaGeneratorOptions DefaultSchemaGeneratorOptions = new SchemaGeneratorOptions
+        {
+        };
+
     }
 }

@@ -65,7 +65,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 if (dataProperty != null)
                 {
                     schema.Nullable = _generatorOptions.SupportNonNullableReferenceTypes
-                        ? dataProperty.IsNullable && !customAttributes.OfType<RequiredAttribute>().Any() && !memberInfo.IsNonNullableReferenceType()
+                        ? dataProperty.IsNullable && !customAttributes.OfType<RequiredAttribute>().Any() && IsNullableHelper.IsNullable(memberInfo)
                         : dataProperty.IsNullable && !customAttributes.OfType<RequiredAttribute>().Any();
 
                     schema.ReadOnly = dataProperty.IsReadOnly;
@@ -123,6 +123,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                     var defaultAsJson = dataContract.JsonConverter(defaultValue);
                     schema.Default = OpenApiAnyFactory.CreateFromJson(defaultAsJson);
                 }
+
+                schema.Nullable = _generatorOptions.SupportNonNullableReferenceTypes
+                    ? IsNullableHelper.IsNullable(parameterInfo) && !customAttributes.OfType<RequiredAttribute>().Any()
+                    : !parameterInfo.ParameterType.IsValueType && !customAttributes.OfType<RequiredAttribute>().Any();
 
                 schema.ApplyValidationAttributes(customAttributes);
 
